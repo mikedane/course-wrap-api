@@ -7,7 +7,7 @@
     "build": "npx babel src --out-dir dist",
     "run": "node dist/app.js",
     "deploy": "npx babel src --out-dir dist && gcloud beta functions deploy ocwScraper --trigger-http",
-    "push-to-git": "git add . && git commit -m 'commit message' && git push origin master"
+    "push-to-git": "git add . && git commit -m 'Switched Http requests to axios package' && git push origin master"
   },
   "author": "Mike Dane",
   "license": "ISC",
@@ -17,9 +17,9 @@
     "babel-preset-env": "^1.6.1"
   },
   "dependencies": {
+    "axios": "^0.18.0",
     "cors": "^2.8.4",
     "express": "^4.16.2",
-    "noodlejs": "^0.3.2",
-    "request": "^2.83.0"
+    "noodlejs": "^0.3.2"
   }
 }

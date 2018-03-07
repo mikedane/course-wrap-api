@@ -1,5 +1,5 @@
-var request = require('request');
-var noodle = require('noodlejs');
+const noodle = require('noodlejs');
+const axios = require('axios');
 
 const mitRootUrl = 'https://ocw.mit.edu';
 
@@ -44,18 +44,16 @@ async function getMITSubjects(callback){
 async function getMITCoursesForSubject(subjectUrl, callback){
     var results = {courses : []};
     var index = 0;
-    request(mitRootUrl + '/courses/' + subjectUrl + '/index.json', function (error, response, body) {
-        if(response.statusCode == 200){
-            var parsedJSON = JSON.parse(body);
-            parsedJSON.forEach((course) => {
-                request(mitRootUrl + course.href + '/index.json', function (error, response, body) {
-                    if(response.statusCode == 200){
+    axios.get(mitRootUrl + '/courses/' + subjectUrl + '/index.json')
+        .then((subjectResponse) => {
+            subjectResponse.data.forEach(async (course) => {
+                await axios.get(mitRootUrl + course.href + '/index.json')
+                    .then((courseResponse) => {
+                        var courseJson = courseResponse.data;
                         index++;
-                        var courseJSON = JSON.parse(body);
-                        results.courses.push({name: course.title, semester: course.sem, level: course.level, description: courseJSON.description, 
-                        image: courseJSON.thumb, instructors: courseJSON.instructors, features: courseJSON.features});
-                        
-                        if(index == parsedJSON.length){
+                        results.courses.push({name: course.title, semester: course.sem, level: course.level, description: courseJson.description, 
+                        image: courseJson.thumb, instructors: courseJson.instructors, features: courseJson.features});
+                        if(index == subjectResponse.data.length){
                             results.courses.sort((a, b)=>{
                                 if (a.name < b.name)
                                 return -1;
@@ -65,14 +63,12 @@ async function getMITCoursesForSubject(subjectUrl, callback){
                             });
                             callback(results);
                         }
-                    }
-                });
+                    })
+                    .catch(error => callback(results));
             });
-        } else {
-            callback(results);
-        }
-        
-    });
+        })
+        .catch(error => callback(results));
+    
 }
 
 const yaleRootUrl = 'https://oyc.yale.edu';
