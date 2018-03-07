@@ -1,0 +1,25 @@
+{
+  "name": "ocw-scraper",
+  "version": "1.0.0",
+  "description": "Scrapes information from Open CourseWare (ocw) websites",
+  "main": "dist/app.js",
+  "scripts": {
+    "build": "npx babel src --out-dir dist",
+    "run": "node dist/app.js",
+    "deploy": "npx babel src --out-dir dist && gcloud beta functions deploy ocwScraper --trigger-http",
+    "push-to-git": "git add . && git commit -m 'commit message' && git push origin master"
+  },
+  "author": "Mike Dane",
+  "license": "ISC",
+  "devDependencies": {
+    "babel-cli": "^6.26.0",
+    "babel-core": "^6.26.0",
+    "babel-preset-env": "^1.6.1"
+  },
+  "dependencies": {
+    "cors": "^2.8.4",
+    "express": "^4.16.2",
+    "noodlejs": "^0.3.2",
+    "request": "^2.83.0"
+  }
+}
