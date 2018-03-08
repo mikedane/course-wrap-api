@@ -59,7 +59,8 @@ let getMITCoursesForSubject = (() => {
                         var courseJson = courseResponse.data;
                         index++;
                         results.courses.push({ name: course.title, semester: course.sem, level: course.level, description: courseJson.description,
-                            image: courseJson.thumb, instructors: courseJson.instructors, features: courseJson.features });
+                            image: mitRootUrl + "/" + courseJson.thumb, instructors: courseJson.instructors, features: courseJson.features,
+                            url: mitRootUrl + course.href });
                         if (index == subjectResponse.data.length) {
                             results.courses.sort(function (a, b) {
                                 if (a.name < b.name) return -1;
@@ -166,6 +167,14 @@ let getYaleCoursesForSubject = (() => {
                 images: {
                     selector: "div.view-content table tbody tr td.views-field-field-department-image img",
                     extract: "src"
+                },
+                descriptions: {
+                    selector: "div.view-content table tbody tr td.views-field-body p:first-of-type",
+                    extract: "text"
+                },
+                urls: {
+                    selector: "div.view-content table tbody tr td.views-field-body a:first-of-type",
+                    extract: "href"
                 }
             }
         };
@@ -173,7 +182,8 @@ let getYaleCoursesForSubject = (() => {
         var rawSubjectResults = yield noodle.query(subjectsQuery);
         var courses = rawSubjectResults.results[0].results;
         for (var i = 0; i < courses.names.length; i++) {
-            results.courses.push({ name: courses.names[i], instructors: courses.instructors[i].replace('with ', ''), image: courses.images[i] });
+            results.courses.push({ name: courses.names[i], instructors: courses.instructors[i].replace('with ', ''),
+                image: courses.images[i], description: courses.descriptions[i], url: yaleRootUrl + courses.urls[i] });
         }
         callback(results);
     });
