@@ -45,17 +45,11 @@ app.get('/data/:school/:subjectUrl', (req, res) => {
             mongodbDao.getCoursesInSubject('https://ocw.mit.edu/', 'https://ocw.mit.edu/courses/' + req.params.subjectUrl, courses => {
                 res.send(courses);
             });
-            // scrapers.getMITCoursesForSubject(req.params.subjectUrl, (courses)=>{
-            //     res.send(courses);
-            // });
             break;
         case 'yale':
             mongodbDao.getCoursesInSubject('https://oyc.yale.edu/', 'https://oyc.yale.edu/' + req.params.subjectUrl, courses => {
                 res.send(courses);
             });
-            // scrapers.getYaleCoursesForSubject(req.params.subjectUrl, (courses)=>{
-            //     res.send(courses);
-            // });
             break;
         default:
             res.send('Invalid school name');
@@ -134,6 +128,6 @@ app.get('/update/:school/:subjectUrl', (req, res) => {
     res.send("Updating " + req.params.school + " | " + req.params.subjectUrl);
 });
 
-// app.listen(3000, () => console.log('Server listening on port 3000!'));
+app.listen(3000, () => console.log('Server listening on port 3000!'));
 
 exports.ocwScraper = app;

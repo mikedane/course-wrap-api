@@ -33,6 +33,8 @@ function getCoursesInSubject(schoolId, subjectId, callback) {
             db.collection('courses').find({ schoolId: schoolId, subjectId: subjectId }).toArray(function (err, result) {
                 assert.equal(null, err);
                 client.close();
+
+                console.log({ schoolId: schoolId, subjectId: subjectId });
                 callback({ courses: result });
             });
         });
@@ -89,6 +91,7 @@ function updateMitSubjects() {
         MongoClient.connect(url, function (err, client) {
             assert.equal(null, err);
             let db = client.db(dbName);
+            db.collection('schools').save({ _id: 'https://ocw.mit.edu/', name: 'MIT', lastUpdated: new Date(lastUpdatedDate) });
             for (let subject of response.data.subjects) {
                 subject._id = subject.url;
                 subject.schoolId = 'https://ocw.mit.edu/';
@@ -112,7 +115,7 @@ function updateMitCoursesForSubject(subjectId) {
             for (let course of response.data.courses) {
                 course._id = course.url;
                 course.schoolId = 'https://ocw.mit.edu/';
-                course.subjectId = 'https://ocw.mit.edu/' + subjectId;
+                course.subjectId = 'https://ocw.mit.edu/courses/' + subjectId;
                 course.lastUpdated = new Date(lastUpdatedDate);
                 db.collection('courses').save(course);
             }
@@ -129,6 +132,8 @@ function updateYaleSubjects() {
         MongoClient.connect(url, function (err, client) {
             assert.equal(null, err);
             let db = client.db(dbName);
+            db.collection('schools').save({ _id: 'https://oyc.yale.edu/', name: 'Yale', lastUpdated: new Date(lastUpdatedDate) });
+
             for (let subject of response.data.subjects) {
                 subject._id = subject.url;
                 subject.schoolId = 'https://oyc.yale.edu/';
