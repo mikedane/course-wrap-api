@@ -49,6 +49,7 @@ async function getMITCoursesForSubject(subjectUrl, callback){
             subjectResponse.data.forEach(async (course) => {
                 await axios.get(mitRootUrl + course.href + '/index.json')
                     .then((courseResponse) => {
+                        console.log("success");
                         var courseJson = courseResponse.data;
                         index++;
                         results.courses.push({name: course.title, semester: course.sem, level: course.level, description: courseJson.description, 
@@ -62,13 +63,25 @@ async function getMITCoursesForSubject(subjectUrl, callback){
                                     return 1;
                                 return 0;
                             });
+                            console.log("returning from " + subjectUrl);
                             callback(results);
                         }
                     })
-                    .catch(error => callback(results));
+                    .catch(error => {
+                        console.log("error");
+                        // console.log("Tried for: " + mitRootUrl + course.href + '/index.json' + "but got Error: " + error.address);
+                              
+                    });
             });
         })
-        .catch(error => callback(results));
+        .catch(error => {
+            if (error.response) {
+                console.log(mitRootUrl + '/courses/' + subjectUrl + '/index.json');
+                console.log(error.response.status);
+                console.log(error.response.headers);
+              }
+            callback(results);
+        });
     
 }
 

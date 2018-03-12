@@ -7,7 +7,7 @@
     "build": "npx babel src --out-dir dist",
     "run": "npx babel src --out-dir dist && node dist/app.js",
     "deploy": "npx babel src --out-dir dist && gcloud beta functions deploy ocwScraper --trigger-http",
-    "push-to-git": "git add . && git commit -m 'Integrated with MongoDB' && git push origin master"
+    "push-to-git": "git add . && git commit -m 'Added auto update functionality to db' && git push origin master"
   },
   "author": "Mike Dane",
   "license": "ISC",
@@ -18,6 +18,7 @@
   },
   "dependencies": {
     "axios": "^0.18.0",
+    "body-parser": "^1.18.2",
     "cors": "^2.8.4",
     "express": "^4.16.2",
     "mongodb": "^3.0.4",

@@ -56,6 +56,7 @@ let getMITCoursesForSubject = (() => {
             subjectResponse.data.forEach((() => {
                 var _ref4 = _asyncToGenerator(function* (course) {
                     yield axios.get(mitRootUrl + course.href + '/index.json').then(function (courseResponse) {
+                        console.log("success");
                         var courseJson = courseResponse.data;
                         index++;
                         results.courses.push({ name: course.title, semester: course.sem, level: course.level, description: courseJson.description,
@@ -67,10 +68,12 @@ let getMITCoursesForSubject = (() => {
                                 if (a.name > b.name) return 1;
                                 return 0;
                             });
+                            console.log("returning from " + subjectUrl);
                             callback(results);
                         }
                     }).catch(function (error) {
-                        return callback(results);
+                        console.log("error");
+                        // console.log("Tried for: " + mitRootUrl + course.href + '/index.json' + "but got Error: " + error.address);
                     });
                 });
 
@@ -79,7 +82,12 @@ let getMITCoursesForSubject = (() => {
                 };
             })());
         }).catch(function (error) {
-            return callback(results);
+            if (error.response) {
+                console.log(mitRootUrl + '/courses/' + subjectUrl + '/index.json');
+                console.log(error.response.status);
+                console.log(error.response.headers);
+            }
+            callback(results);
         });
     });
 
