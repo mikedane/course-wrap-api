@@ -103,31 +103,31 @@ app.get('/scraper/:school/:subjectUrl', (req, res) => {
 app.get('/update/:school', (req, res) => {
     switch (req.params.school) {
         case 'mit':
-            mongodbDao.updateMitSubjects();
+            mongodbDao.updateSubjects("mit", "https://ocw.mit.edu/");
             break;
         case 'yale':
-            mongodbDao.updateYaleSubjects();
+            mongodbDao.updateSubjects("yale", "https://oyc.yale.edu/");
             break;
         default:
             res.send('Invalid school name');
     }
-    res.send("Updating " + req.params.school);
+    res.send("Started updating " + req.params.school);
 });
 
 app.get('/update/:school/:subjectUrl', (req, res) => {
     switch (req.params.school) {
         case 'mit':
-            mongodbDao.updateMitCoursesForSubject(req.params.subjectUrl);
+            mongodbDao.updateCoursesForSubject("mit", "https://ocw.mit.edu/", req.params.subjectUrl, "https://ocw.mit.edu/courses/" + req.params.subjectUrl);
             break;
         case 'yale':
-            mongodbDao.updateYaleCoursesForSubject(req.params.subjectUrl);
+            mongodbDao.updateCoursesForSubject("yale", "https://oyc.yale.edu/", req.params.subjectUrl, "https://oyc.yale.edu/" + req.params.subjectUrl);
             break;
         default:
             res.send('Invalid school name');
     }
-    res.send("Updating " + req.params.school + " | " + req.params.subjectUrl);
+    res.send("Started updating " + req.params.school + " | " + req.params.subjectUrl);
 });
 
-app.listen(3000, () => console.log('Server listening on port 3000!'));
+// app.listen(3000, () => console.log('Server listening on port 3000!'));
 
 exports.ocwScraper = app;

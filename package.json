@@ -7,7 +7,7 @@
     "build": "npx babel src --out-dir dist",
     "run": "npx babel src --out-dir dist && node dist/app.js",
     "deploy": "npx babel src --out-dir dist && gcloud beta functions deploy ocwScraper --trigger-http",
-    "push-to-git": "git add . && git commit -m 'Fixed mit schoolId formatting bug' && git push origin master"
+    "push-to-git": "git add . && git commit -m 'Modified data queries to join subject & school info'"
   },
   "author": "Mike Dane",
   "license": "ISC",
@@ -17,6 +17,7 @@
     "babel-preset-env": "^1.6.1"
   },
   "dependencies": {
+    "algoliasearch": "^3.25.1",
     "axios": "^0.18.0",
     "body-parser": "^1.18.2",
     "cors": "^2.8.4",
