@@ -56,7 +56,7 @@ function getCoursesInSubject(schoolUrl, subjectUrl, callback) {
             }]).toArray(function (err, result) {
                 assert.equal(null, err);
                 client.close();
-                callback({ subjects: result });
+                callback({ courses: result });
             });
 
             // db.collection('courses').find({schoolId: schoolUrl, subjectId: schoolUrl + subjectUrl}).toArray(function(err, result) {
@@ -77,7 +77,21 @@ function searchForCourse(queryString, limit, callback) {
         var _ref2 = _asyncToGenerator(function* (err, client) {
             assert.equal(null, err);
             let db = client.db(dbName);
-            db.collection("courses").find({ $text: { $search: queryString } }).project({ score: { $meta: "textScore" } }).sort({ score: { $meta: "textScore" } }).limit(parseInt(limit) != null ? parseInt(limit) : 0).toArray(function (err, result) {
+            db.collection("courses").aggregate([{ $match: { $text: { $search: queryString } } }, { $sort: { score: { $meta: "textScore" } } }, {
+                $lookup: {
+                    from: "subjects",
+                    localField: "subjectId",
+                    foreignField: "_id",
+                    as: "subject"
+                }
+            }, {
+                $lookup: {
+                    from: "schools",
+                    localField: "schoolId",
+                    foreignField: "_id",
+                    as: "school"
+                }
+            }]).toArray(function (err, result) {
                 assert.equal(null, err);
                 client.close();
                 callback({ results: result });
@@ -190,3 +204,27 @@ module.exports.updateCoursesForSubject = updateCoursesForSubject;
 //       }
 //  }
 //  ])
+
+// db.courses.aggregate(
+//     {$match: { $text: { $search: "history" } }},
+//     { $sort: { score: { $meta: "textScore" } } },
+//     {
+//         $lookup:
+//         {
+//             from: "subjects",
+//             localField: "subjectId",
+//             foreignField: "_id",
+//             as: "subject"
+//         }
+
+//     },
+//     {
+//         $lookup:
+//         {
+//             from: "schools",
+//             localField: "schoolId",
+//             foreignField: "_id",
+//             as: "school"
+//         }
+//     }
+// )

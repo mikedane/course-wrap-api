@@ -128,6 +128,6 @@ app.get('/update/:school/:subjectUrl', (req, res) => {
     res.send("Started updating " + req.params.school + " | " + req.params.subjectUrl);
 });
 
-// app.listen(3000, () => console.log('Server listening on port 3000!'));
+app.listen(3000, () => console.log('Server listening on port 3000!'));
 
 exports.ocwScraper = app;
