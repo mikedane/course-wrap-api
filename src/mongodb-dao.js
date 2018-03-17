@@ -3,118 +3,241 @@ const assert = require('assert');
 const scrapers = require('./scraper.js');
 const axios = require('axios');
 
-const username = "gcloud";
-const password = "dogdogdog";
-const dbName = 'course-wrap';
-const url = 'mongodb://' + username + ':' + password + '@ds251588.mlab.com:51588/' + dbName;
 const millisecondsInDay = 86400000;
 
-
-function getSubjects(schoolUrl, callback){
-    MongoClient.connect(url, function(err, client) {
-        assert.equal(null, err);
-        let db = client.db(dbName);
-
-        db.collection("subjects").aggregate([
-            { $match: { schoolId: schoolUrl } },
+ function getSchools(id, returnSubjects, callback){
+    const collectionName = "schools";
+    const aggregateParams = [
+        { $match: (id ? { _id: id} : {}) },
+    ];
+    if(returnSubjects) {
+        aggregateParams.push({
+            $lookup:
             {
-              $lookup:
-                {
-                  from: "schools",
-                  localField: "schoolId",
-                  foreignField: "_id",
-                  as: "school"
-                }
-           },
-         ]).toArray(function(err, result) {
-            assert.equal(null, err);
-            client.close();
-            callback({subjects: result})
+                from: "subjects",
+                localField: "_id",
+                foreignField: "schoolId",
+                as: "subjects"
+            }
         });
+    }
+    mongoAggregate(collectionName, aggregateParams, (result) => {
+        callback({schools: result})
     });
-}
+    shouldFetchFreshData(schoolId, result => {
+        if(result){
+            accessApi('update/subjects?schoolId=' + schoolId);
+        }
+    });
+ }
 
-function getCoursesInSubject(schoolUrl, subjectUrl, callback){
-    MongoClient.connect(url, async function(err, client) {
-        assert.equal(null, err);
-        let db = client.db(dbName);
-
-        db.collection("courses").aggregate([
-            { $match: { schoolId: schoolUrl, subjectId: schoolUrl + subjectUrl } },
+ function getSubjects(id, schoolId, returnCourses, callback){
+    const collectionName = "subjects";
+    let matches = {};
+    if(id) matches["_id"] = id;
+    if(schoolId) matches["schoolId"] = schoolId;
+    const aggregateParams = [
+        { $match: matches },
+        {
+            $lookup:
             {
-              $lookup:
-                {
-                  from: "schools",
-                  localField: "schoolId",
-                  foreignField: "_id",
-                  as: "school"
-                }
-           },
-           {
-                $lookup:
-                  {
-                    from: "subjects",
-                    localField: "subjectId",
-                    foreignField: "_id",
-                    as: "subject"
-                  }
-             }
-         ]).toArray(function(err, result) {
-            assert.equal(null, err);
-            client.close();
-            callback({courses: result})
+              from: "schools",
+              localField: "schoolId",
+              foreignField: "_id",
+              as: "raw_school"
+            },
+        },
+    ];
+    if(returnCourses) {
+        aggregateParams.push({
+            $lookup:
+            {
+                from: "courses",
+                localField: "_id",
+                foreignField: "subjectId",
+                as: "courses"
+            }
         });
-
-
-
-
-        // db.collection('courses').find({schoolId: schoolUrl, subjectId: schoolUrl + subjectUrl}).toArray(function(err, result) {
-        //     assert.equal(null, err);
-        //     client.close();
-        //     callback({courses: result})
-        // });
+    }
+    mongoAggregate(collectionName, aggregateParams, (result) => {
+        result.forEach((subject) => {
+            subject.school = subject.raw_school[0];
+            delete subject.raw_school;
+        });
+        callback({subjects: result});
     });
-}
+ }
 
-function searchForCourse(queryString, limit, callback){
-    MongoClient.connect(url, async function(err, client) {
-        assert.equal(null, err);
-        let db = client.db(dbName); 
-            db.collection("courses").aggregate(
-                [
-                {$match: { $text: { $search: queryString } }},
-                { $sort: { score: { $meta: "textScore" } } },
-                {
-                    $lookup:
-                    {
-                        from: "subjects",
-                        localField: "subjectId",
-                        foreignField: "_id",
-                        as: "subject"
-                    }
-                },
-                {
-                    $lookup:
-                    {
-                        from: "schools",
-                        localField: "schoolId",
-                        foreignField: "_id",
-                        as: "school"
-                    }
-                },
-            ]
-            ).toArray(function(err, result) {
+ function getCourses(id, subjectId, schoolId, callback){
+    const collectionName = "courses";
+    let matches = {};
+    if(id) matches["_id"] = id;
+    if(subjectId) matches["subjectId"] = subjectId;
+    if(schoolId) matches["schoolId"] = schoolId;
+    const aggregateParams = [
+        { $match: matches },
+        {
+            $lookup:
+            {
+              from: "schools",
+              localField: "schoolId",
+              foreignField: "_id",
+              as: "raw_school"
+            },
+        },
+        {
+            $lookup:
+              {
+                from: "subjects",
+                localField: "subjectId",
+                foreignField: "_id",
+                as: "raw_subject"
+              }
+         },
+    ];
+    mongoAggregate(collectionName, aggregateParams, (result) => {
+        result.forEach((course) => {
+            course.school = course.raw_school[0];
+            delete course.raw_school;
+
+            course.subject = course.raw_subject[0];
+            delete course.raw_subject
+        });
+        callback({courses: result});
+    });
+ }
+
+ function getCourseFromQuery(query, limit, callback){
+    const collectionName = "courses";
+    const aggregateParams = [
+        {$match: { $text: { $search: query } }},
+        { $sort: { score: { $meta: "textScore" } } },
+    ];
+    if(limit) aggregateParams.push({ $limit : limit });
+    aggregateParams.push(        {
+        $lookup:
+        {
+            from: "subjects",
+            localField: "subjectId",
+            foreignField: "_id",
+            as: "raw_subject"
+        }
+    });
+    aggregateParams.push( {
+        $lookup:
+        {
+            from: "schools",
+            localField: "schoolId",
+            foreignField: "_id",
+            as: "raw_school"
+        }
+    });
+    mongoAggregate(collectionName, aggregateParams, (result) => {
+        result.forEach((course) => {
+            course.school = course.raw_school[0];
+            delete course.raw_school;
+
+            course.subject = course.raw_subject[0];
+            delete course.raw_subject
+        });
+        callback({courses: result});
+    });
+ }
+
+function updateSubjects(schoolId){
+    let lastUpdatedDate = new Date(Date.now());
+    scrapers.getSubjects(schoolId, results => {
+        connectToMongo((client, db) => {
+            db.collection('schools').update({_id: schoolId}, {$set: {lastUpdated: new Date(lastUpdatedDate)}});
+            for(let subject of results.subjects){
+                subject._id = schoolId + subject.url;
+                subject.schoolId = schoolId;
+                subject.lastUpdated = lastUpdatedDate;
+                db.collection('subjects').save(subject);
+                updateCoursesForSubject(schoolId, subject._id);
+            }
+            db.collection("subjects").find({schoolId: schoolId, lastUpdated: {"$lt" : lastUpdatedDate}}).toArray(function(err, result) {
                 assert.equal(null, err);
-                client.close();
-                callback({results: result})
+                result.forEach((subject) => {
+                    db.collection("courses").remove({subjectId: subject._id, lastUpdated: {"$lt" : lastUpdatedDate}});
+                });
             });
+            db.collection('subjects').remove(
+                {schoolId: schoolId, lastUpdated: {"$lt" : lastUpdatedDate}}
+            );
+            client.close();
+        });
     });
+}
+
+function updateCoursesForSubject(schoolId, subjectId){
+    const lastUpdatedDate = new Date(Date.now());
+    scrapers.getCourses(schoolId, subjectId, results => {
+        connectToMongo((client, db) => {
+            for(let course of results.courses){
+                course._id = subjectId + course.url;
+                course.schoolId = schoolId;
+                course.subjectId = subjectId;
+                course.lastUpdated = lastUpdatedDate;
+                db.collection('courses').save(course);
+            }
+            db.collection('courses').remove(
+                {subjectId: subjectId, lastUpdated: {"$lt" : lastUpdatedDate}}
+            );
+            client.close();
+        });
+    });
+}
+
+function mongoAggregate(collectionName, aggregateParams, callback){
+    connectToMongo((client, db) => {
+        db.collection(collectionName).aggregate(aggregateParams).toArray(function(err, result) {
+            assert.equal(null, err);
+            client.close();
+            callback(result);
+        });
+    });
+}
+
+function mongoSave(collectionName, saveParams){
+    connectToMongo((client, db) => {
+        db.collection(collectionName).save(saveParams);
+    });
+}
+
+function mongoFind(collectionName, findParams, callback){
+    connectToMongo((client, db) => {
+        db.collection(collectionName).find(findParams).toArray(function(err, result) {
+            assert.equal(null, err);
+            client.close();
+            callback(result);
+        });
+    });
+}
+
+function connectToMongo(callback){
+    const username = "gcloud";
+    const password = "dogdogdog";
+    const dbName = 'course-wrap';
+    const url = 'mongodb://' + username + ':' + password + '@ds251588.mlab.com:51588/' + dbName;
+
+    MongoClient.connect(url, async function(err, client) {
+        assert.equal(null, err);
+        let db = client.db(dbName);
+        callback(client, db);
+    });
+}
+
+function accessApi(endPoint, callback){
+    axios.get('https://us-central1-test-api-197100.cloudfunctions.net/ocwScraper/' + endPoint)
+        .then((response) => {
+            callback(response);
+        })
+        .catch((error) => {console.log(error); callback({})});   
 }
 
 function shouldFetchFreshData(schoolId, callback){
-    MongoClient.connect(url, async function(err, client) {
-        assert.equal(null, err);
-        let db = client.db(dbName); 
+    connectToMongo((client, db) => {
         db.collection('schools').find({_id: schoolId}).toArray(function(err, result) {
             assert.equal(null, err);
             client.close();
@@ -127,113 +250,9 @@ function shouldFetchFreshData(schoolId, callback){
     });
 }
 
-function updateSubjects(schoolName, schoolUrl){
-    let lastUpdatedDate = new Date(Date.now());
-    axios.get('https://us-central1-test-api-197100.cloudfunctions.net/ocwScraper/scraper/' + schoolName)
-        .then((response) => {
-            MongoClient.connect(url, function(err, client) {
-                assert.equal(null, err);
-                let db = client.db(dbName);
-                db.collection('schools').save({_id: schoolUrl, name: schoolName, lastUpdated: new Date(lastUpdatedDate)});
-                for(let subject of response.data.subjects){
-                    subject._id = schoolUrl + subject.url;
-                    subject.schoolId = schoolUrl;
-                    subject.lastUpdated = lastUpdatedDate;
-                    db.collection('subjects').save(subject);
-                    updateCoursesForSubject(schoolName, schoolUrl, subject.url.split("/").pop(), subject.url);
-                }
-                db.collection("subjects").find({schoolId: schoolUrl, lastUpdated: {"$lt" : lastUpdatedDate}}).toArray(function(err, result) {
-                    assert.equal(null, err);
-                    console.log(lastUpdatedDate);
-                    console.log(result);
-                    result.forEach((subject) => {
-                        db.collection("courses").remove({subjectId: subject._id, lastUpdated: {"$lt" : lastUpdatedDate}});
-                    });
-                });
-                db.collection('subjects').remove(
-                    {schoolId: schoolUrl, lastUpdated: {"$lt" : lastUpdatedDate}}
-                 );
-            });
-        })
-        .catch((error) => {console.log(error); return});        
-}
-
-function updateCoursesForSubject(schoolName, schoolUrl, subjectName, subjectUrl){
-    const lastUpdatedDate = new Date(Date.now());
-    axios.get('https://us-central1-test-api-197100.cloudfunctions.net/ocwScraper/scraper/'+schoolName+'/' + subjectName)
-        .then((response) => {
-            MongoClient.connect(url, function(err, client) {
-                assert.equal(null, err);
-                let db = client.db(dbName);
-                for(let course of response.data.courses){
-                    course._id = schoolUrl + subjectUrl + course.url;
-                    course.schoolId = schoolUrl;
-                    course.subjectId = schoolUrl + subjectUrl;
-                    course.lastUpdated = lastUpdatedDate;
-                    db.collection('courses').save(course);
-                }
-                db.collection('courses').remove(
-                    {subjectId: schoolUrl + subjectUrl, lastUpdated: {"$lt" : lastUpdatedDate}}
-                 );
-            });
-        })
-        .catch((error) => {console.log(error); return});
-}
-
-
-
+module.exports.getSchools = getSchools;
 module.exports.getSubjects = getSubjects;
-module.exports.getCoursesInSubject = getCoursesInSubject;
-module.exports.searchForCourse = searchForCourse;
-module.exports.shouldFetchFreshData = shouldFetchFreshData;
-
+module.exports.getCourses = getCourses;
+module.exports.getCourseFromQuery = getCourseFromQuery;
 module.exports.updateSubjects = updateSubjects;
 module.exports.updateCoursesForSubject = updateCoursesForSubject;
-
-
-
-// db.collection("subjects").aggregate([
-//     { $match: { schoolId: schoolId } },
-//     {
-//       $lookup:
-//         {
-//           from: "schools",
-//           localField: "schoolId",
-//           foreignField: "_id",
-//           as: "school"
-//         }
-//    },
-//    {
-//     $lookup:
-//       {
-//         from: "subjects",
-//         localField: "subjectId",
-//         foreignField: "_id",
-//         as: "subject"
-//       }
-//  }
-//  ])
-
-// db.courses.aggregate(
-//     {$match: { $text: { $search: "history" } }},
-//     { $sort: { score: { $meta: "textScore" } } },
-//     {
-//         $lookup:
-//         {
-//             from: "subjects",
-//             localField: "subjectId",
-//             foreignField: "_id",
-//             as: "subject"
-//         }
-        
-//     },
-//     {
-//         $lookup:
-//         {
-//             from: "schools",
-//             localField: "schoolId",
-//             foreignField: "_id",
-//             as: "school"
-//         }
-//     }
-// )

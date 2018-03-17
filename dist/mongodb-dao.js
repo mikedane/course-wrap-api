@@ -18,17 +18,39 @@ function getSubjects(schoolUrl, callback) {
         assert.equal(null, err);
         let db = client.db(dbName);
 
-        db.collection("subjects").aggregate([{ $match: { schoolId: schoolUrl } }, {
+        db.collection('subjects').aggregate([{ $match: { schoolId: schoolUrl } }, {
             $lookup: {
                 from: "schools",
                 localField: "schoolId",
                 foreignField: "_id",
                 as: "school"
             }
+        }, {
+            $lookup: {
+                from: "courses",
+                localField: "_id",
+                foreignField: "subjectId",
+                as: "courses"
+            }
+        }, {
+            $project: {
+                document: "$$ROOT",
+                courses: { $size: "$courses" }
+            }
+        }, {
+            $project: {
+                "document.courses": 0
+            }
         }]).toArray(function (err, result) {
             assert.equal(null, err);
             client.close();
-            callback({ subjects: result });
+            let toBeReturned = [];
+            result.forEach(subject => {
+                let tempSubject = subject.document;
+                tempSubject.courses = subject.courses;
+                toBeReturned.push(tempSubject);
+            });
+            callback({ subjects: toBeReturned });
         });
     });
 }
@@ -77,7 +99,7 @@ function searchForCourse(queryString, limit, callback) {
         var _ref2 = _asyncToGenerator(function* (err, client) {
             assert.equal(null, err);
             let db = client.db(dbName);
-            db.collection("courses").aggregate([{ $match: { $text: { $search: queryString } } }, { $sort: { score: { $meta: "textScore" } } }, {
+            db.collection("courses").aggregate([{ $match: { $text: { $search: queryString } } }, { $sort: { score: { $meta: "textScore" } } }, { $limit: limit }, {
                 $lookup: {
                     from: "subjects",
                     localField: "subjectId",
@@ -183,8 +205,8 @@ module.exports.shouldFetchFreshData = shouldFetchFreshData;
 module.exports.updateSubjects = updateSubjects;
 module.exports.updateCoursesForSubject = updateCoursesForSubject;
 
-// db.collection("subjects").aggregate([
-//     { $match: { schoolId: schoolId } },
+// db.subjects.aggregate([
+//     { $match: { schoolId: "https://oyc.yale.edu/" } },
 //     {
 //       $lookup:
 //         {
@@ -197,34 +219,16 @@ module.exports.updateCoursesForSubject = updateCoursesForSubject;
 //    {
 //     $lookup:
 //       {
-//         from: "subjects",
-//         localField: "subjectId",
-//         foreignField: "_id",
-//         as: "subject"
+//         from: "courses",
+//         localField: "_id",
+//         foreignField: "subjectId",
+//         as: "courses"
 //       }
+//  },
+//  {
+//     $project: {
+//         document: "$$ROOT",
+//         courses: { $size: "$courses" },
+//      }
 //  }
 //  ])
-
-// db.courses.aggregate(
-//     {$match: { $text: { $search: "history" } }},
-//     { $sort: { score: { $meta: "textScore" } } },
-//     {
-//         $lookup:
-//         {
-//             from: "subjects",
-//             localField: "subjectId",
-//             foreignField: "_id",
-//             as: "subject"
-//         }
-
-//     },
-//     {
-//         $lookup:
-//         {
-//             from: "schools",
-//             localField: "schoolId",
-//             foreignField: "_id",
-//             as: "school"
-//         }
-//     }
-// )

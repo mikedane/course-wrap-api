@@ -58,7 +58,7 @@ app.get('/data/:school/:subjectUrl', (req, res) => {
 
 app.get('/search', (req, res) => {
     if (req.query.searchQuery != null) {
-        mongodbDao.searchForCourse(req.query.searchQuery.split("+").join(" "), req.query.limit == null ? 0 : req.query.limit, courses => {
+        mongodbDao.searchForCourse(req.query.searchQuery.split("+").join(" "), req.query.limit == null || req.query.limit < 1 ? 100000 : parseInt(req.query.limit), courses => {
             res.send(courses);
         });
     } else {
@@ -128,6 +128,6 @@ app.get('/update/:school/:subjectUrl', (req, res) => {
     res.send("Started updating " + req.params.school + " | " + req.params.subjectUrl);
 });
 
-app.listen(3000, () => console.log('Server listening on port 3000!'));
+// app.listen(3000, () => console.log('Server listening on port 3000!'));
 
 exports.ocwScraper = app;

@@ -1,10 +1,40 @@
 const noodle = require('noodlejs');
 const axios = require('axios');
 
+const mitId = 'https://ocw.mit.edu/';
+const yaleId = 'https://oyc.yale.edu/';
+
+function getSubjects(schoolId, callback){
+    switch(schoolId){
+        case mitId:
+            getMITSubjects(callback);
+            break;
+        case yaleId:
+            getYaleSubjects(callback);
+            break;
+        default:
+            callback({subjects: []});
+    }
+}
+
+function getCourses(schoolId, subjectId, callback){
+    if(subjectId){
+        switch(schoolId){
+            case mitId:
+                getMITCoursesForSubject(getSubjectUrlFromId(subjectId), callback);
+                break;
+            case yaleId:
+                getYaleCoursesForSubject(getSubjectUrlFromId(subjectId), callback);
+                break;
+            default:
+                callback({courses: []});
+        }
+    }
+}
+
+// ------------------ MIT ----------------------
 const mitRootUrl = 'https://ocw.mit.edu';
-
 async function getMITSubjects(callback){
-
     var finishedCount = 0;
     var results = {subjects : []};
     
@@ -85,10 +115,9 @@ async function getMITCoursesForSubject(subjectUrl, callback){
     
 }
 
+// ------------------ Yale ---------------------
 const yaleRootUrl = 'https://oyc.yale.edu';
-
 async function getYaleSubjects(callback){
-
     var finishedCount = 0;
     var results = {subjects : []};
     
@@ -137,7 +166,6 @@ async function getYaleSubjects(callback){
 }
 
 async function getYaleCoursesForSubject(subject, callback){
-
     var results = {courses: []};
     var subjectsQuery = {
         url: yaleRootUrl + '/' + subject,
@@ -178,7 +206,9 @@ async function getYaleCoursesForSubject(subject, callback){
 
 }
 
-module.exports.getMITSubjects = getMITSubjects;
-module.exports.getMITCoursesForSubject = getMITCoursesForSubject;
-module.exports.getYaleSubjects = getYaleSubjects;
-module.exports.getYaleCoursesForSubject = getYaleCoursesForSubject;
+function getSubjectUrlFromId(subjectId){
+    return subjectId.split("/").pop();
+}
+
+module.exports.getSubjects = getSubjects;
+module.exports.getCourses = getCourses;
