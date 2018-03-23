@@ -3,6 +3,8 @@ const axios = require('axios');
 
 const mitId = 'https://ocw.mit.edu/';
 const yaleId = 'https://oyc.yale.edu/';
+const cmId = 'http://oli.cmu.edu/';
+const michiganId = 'https://open.umich.edu/';
 
 function getSubjects(schoolId, callback){
     switch(schoolId){
@@ -11,6 +13,12 @@ function getSubjects(schoolId, callback){
             break;
         case yaleId:
             getYaleSubjects(callback);
+            break;
+        case cmId:
+            getCMSubjects(callback);
+            break;
+        case michiganId:
+            getMichiganSubjects(callback);
             break;
         default:
             callback({subjects: []});
@@ -25,6 +33,12 @@ function getCourses(schoolId, subjectId, callback){
                 break;
             case yaleId:
                 getYaleCoursesForSubject(getSubjectUrlFromId(subjectId), callback);
+                break;
+            case cmId:
+                getCMCoursesForSubject(getSubjectUrlFromId(subjectId), callback);
+                break;
+            case michiganId:
+                getMichiganCoursesForSubject(getSubjectUrlFromId(subjectId), callback);
                 break;
             default:
                 callback({courses: []});
@@ -79,7 +93,6 @@ async function getMITCoursesForSubject(subjectUrl, callback){
             subjectResponse.data.forEach(async (course) => {
                 await axios.get(mitRootUrl + course.href + '/index.json')
                     .then((courseResponse) => {
-                        console.log("success");
                         var courseJson = courseResponse.data;
                         index++;
                         results.courses.push({name: course.title, semester: course.sem, level: course.level, description: courseJson.description, 
@@ -93,22 +106,18 @@ async function getMITCoursesForSubject(subjectUrl, callback){
                                     return 1;
                                 return 0;
                             });
-                            console.log("returning from " + subjectUrl);
                             callback(results);
                         }
                     })
                     .catch(error => {
-                        console.log("error");
-                        // console.log("Tried for: " + mitRootUrl + course.href + '/index.json' + "but got Error: " + error.address);
+                        // console.log("Tried for: " + mitRootUrl + course.href + '/index.json' + " but got Error: " + error.address);
                               
                     });
             });
         })
         .catch(error => {
             if (error.response) {
-                console.log(mitRootUrl + '/courses/' + subjectUrl + '/index.json');
-                console.log(error.response.status);
-                console.log(error.response.headers);
+                // console.log("error");
               }
             callback(results);
         });
@@ -205,6 +214,149 @@ async function getYaleCoursesForSubject(subject, callback){
     callback(results);
 
 }
+
+// -------------- Carnegie Mellon ---------------
+const cmRootUrl = 'http://oli.cmu.edu/learn-with-oli/';
+const cmImageRootUrl = 'http://oli.cmu.edu/';
+function getCMSubjects(callback){
+    let results = {subjects: []};
+    results.subjects = [{name: "All Carnegie Mellon Courses", url: cmRootUrl + 'see-all-oli-courses', image: 'http://oli.cmu.edu/wp-content/uploads/2012/07/bio_thumb.png'}];
+    callback(results);
+}
+
+async function getCMCoursesForSubject(subject, callback){
+    var subjectsQuery = {
+        url: cmRootUrl + '/' + subject,
+        type: 'html',
+        selector: "div.accordion-group div.accordion-body a.addInfo",
+        extract: "href"
+    }
+
+    var rawSubjectResults = await noodle.query(subjectsQuery);
+    var courseUrls = rawSubjectResults.results[0].results;
+    let finishedCount = 0;
+    let results = {courses: []};
+    courseUrls.forEach(async courseUrl => {
+        var courseQuery = {
+            url: courseUrl,
+            type: 'html',
+            map: {
+                images: {
+                    selector: "div.overview img ",
+                    extract: "src"
+                },
+                titles: {
+                    selector: "h1",
+                    extract: "text"
+                },
+                descriptions: {
+                    selector: "div.overview p",
+                    extract: "text"
+                }
+            }
+        }
+
+        var rawCourseResults = await noodle.query(courseQuery);
+        let course = rawCourseResults.results[0].results; 
+        let description = "";
+        if(course.descriptions.length > 0){
+            course.descriptions.forEach(part => {
+                description += part + "\n";
+            });
+        }
+        results.courses.push({name: course.titles[0], image: course.images[0] ? (course.images[0].charAt(0) == '/' ? cmImageRootUrl + course.images[0] : course.images[0])  : "", description: description, url: courseUrl});
+        finishedCount++;
+        if(finishedCount == courseUrls.length){
+            callback(results);
+        }
+    });
+}
+
+// -------------- Michigan ---------------
+const michiganRootUrl = 'https://open.umich.edu/';
+
+
+async function getMichiganSubjects(callback){
+    var finishedCount = 0;
+    var results = {subjects : []};
+    var subjectsQuery = {
+        url: michiganRootUrl + 'find/find-open-educational-resources/',
+        type: 'html',
+        selector: 'aside.sidebars section.sidebar ul.menu li.menu__item ul.menu li.menu__item a',
+        extract: ['text', 'href']
+    }
+    console.log("here");
+    var rawSubjectResults = await noodle.query(subjectsQuery);
+
+    var subjects = rawSubjectResults.results[0].results
+    console.log(subjects);
+    subjects.forEach(async (subject) => {
+        finishedCount++;
+        results.subjects.push({name: subject.text, url: michiganRootUrl + subject.href, image: ""});
+        if(finishedCount == subjects.length){
+            results.subjects.sort((a, b)=>{
+                if (a.name < b.name)
+                return -1;
+                if (a.name > b.name)
+                    return 1;
+                return 0;
+            });
+            callback(results);
+        }
+    });
+}
+
+
+async function getMichiganCoursesForSubject(subject, callback){
+    var subjectsQuery = {
+        url: michiganRootUrl + 'find/open-educational-resources/' + subject,
+        type: 'html',
+        selector: "aside.sidebars section.sidebar ul.menu li.active ul.menu li.menu__item a",
+        extract: "href"
+    }
+
+    var rawSubjectResults = await noodle.query(subjectsQuery);
+    var courseUrls = rawSubjectResults.results[0].results;
+    let finishedCount = 0;
+    let results = {courses: []};
+    courseUrls.forEach(async courseUrl => {
+        var courseQuery = {
+            url: michiganRootUrl + courseUrl,
+            type: 'html',
+            map: {
+                images: {
+                    selector: "div.course-image-wrapper img ",
+                    extract: "src"
+                },
+                titles: {
+                    selector: "h1.title",
+                    extract: "text"
+                },
+                descriptions: {
+                    selector: "div.course-content-wrapper div.field-name-field-description p",
+                    extract: "text"
+                }
+            }
+        }
+
+        var rawCourseResults = await noodle.query(courseQuery);
+        let course = rawCourseResults.results[0].results; 
+        
+        let description = "";
+        if(course.descriptions.length > 0){
+            course.descriptions.forEach(part => {
+                description += part + "\n";
+            });
+        }
+        results.courses.push({name: course.titles[0], image: course.images[0], description: description, url: michiganRootUrl + courseUrl});
+        finishedCount++;
+        if(finishedCount == courseUrls.length){
+            callback(results);
+        }
+    });
+}
+
+
 
 function getSubjectUrlFromId(subjectId){
     return subjectId.split("/").pop();

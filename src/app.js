@@ -11,13 +11,13 @@ app.get('/', (req, res) => {
 });
 
 app.get('/schools/', (req, res) => {
-    const {id} = req.query;
-    mongodbDao.getSchools(id, true, results =>  res.send(results));
+    const {id, getSubjects} = req.query;
+    mongodbDao.getSchools(id, getSubjects == "true" ? true : false, results =>  res.send(results));
 });
 
 app.get('/subjects/', (req, res) => {
-    const {id, schoolId} = req.query;
-    mongodbDao.getSubjects(id, schoolId, id ? true : false, results =>  res.send(results));
+    const {id, schoolId, getCourses} = req.query;
+    mongodbDao.getSubjects(id, schoolId, getCourses == "true" ? true : false, results =>  res.send(results));
 });
 
 app.get('/courses/', (req, res) => {
@@ -33,11 +33,13 @@ app.get('/search', (req, res) => {
 app.get('/update/subjects', (req, res) => {
     const {schoolId} = req.query;
     mongodbDao.updateSubjects(schoolId);
+    res.send("Updating " + schoolId);
 });
 
 app.get('/update/courses', (req, res) => {
     const {schoolId, subjectId} = req.query;
     mongodbDao.updateCoursesForSubject(schoolId, subjectId);
+    res.send("Updating " + schoolId);
 });
 
 app.get('/scrape/subjects', (req, res) => {

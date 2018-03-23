@@ -2,7 +2,6 @@
 
 let getMITSubjects = (() => {
     var _ref = _asyncToGenerator(function* (callback) {
-
         var finishedCount = 0;
         var results = { subjects: [] };
 
@@ -56,7 +55,6 @@ let getMITCoursesForSubject = (() => {
             subjectResponse.data.forEach((() => {
                 var _ref4 = _asyncToGenerator(function* (course) {
                     yield axios.get(mitRootUrl + course.href + '/index.json').then(function (courseResponse) {
-                        console.log("success");
                         var courseJson = courseResponse.data;
                         index++;
                         results.courses.push({ name: course.title, semester: course.sem, level: course.level, description: courseJson.description,
@@ -68,12 +66,11 @@ let getMITCoursesForSubject = (() => {
                                 if (a.name > b.name) return 1;
                                 return 0;
                             });
-                            console.log("returning from " + subjectUrl);
                             callback(results);
                         }
                     }).catch(function (error) {
-                        console.log("error");
-                        // console.log("Tried for: " + mitRootUrl + course.href + '/index.json' + "but got Error: " + error.address);
+                        // console.log("Tried for: " + mitRootUrl + course.href + '/index.json' + " but got Error: " + error.address);
+
                     });
                 });
 
@@ -83,9 +80,7 @@ let getMITCoursesForSubject = (() => {
             })());
         }).catch(function (error) {
             if (error.response) {
-                console.log(mitRootUrl + '/courses/' + subjectUrl + '/index.json');
-                console.log(error.response.status);
-                console.log(error.response.headers);
+                // console.log("error");
             }
             callback(results);
         });
@@ -96,9 +91,11 @@ let getMITCoursesForSubject = (() => {
     };
 })();
 
+// ------------------ Yale ---------------------
+
+
 let getYaleSubjects = (() => {
     var _ref5 = _asyncToGenerator(function* (callback) {
-
         var finishedCount = 0;
         var results = { subjects: [] };
 
@@ -158,7 +155,6 @@ let getYaleSubjects = (() => {
 
 let getYaleCoursesForSubject = (() => {
     var _ref7 = _asyncToGenerator(function* (subject, callback) {
-
         var results = { courses: [] };
         var subjectsQuery = {
             url: yaleRootUrl + '/' + subject,
@@ -201,16 +197,239 @@ let getYaleCoursesForSubject = (() => {
     };
 })();
 
+// -------------- Carnegie Mellon ---------------
+
+
+let getCMCoursesForSubject = (() => {
+    var _ref8 = _asyncToGenerator(function* (subject, callback) {
+        var subjectsQuery = {
+            url: cmRootUrl + '/' + subject,
+            type: 'html',
+            selector: "div.accordion-group div.accordion-body a.addInfo",
+            extract: "href"
+        };
+
+        var rawSubjectResults = yield noodle.query(subjectsQuery);
+        var courseUrls = rawSubjectResults.results[0].results;
+        let finishedCount = 0;
+        let results = { courses: [] };
+        courseUrls.forEach((() => {
+            var _ref9 = _asyncToGenerator(function* (courseUrl) {
+                var courseQuery = {
+                    url: courseUrl,
+                    type: 'html',
+                    map: {
+                        images: {
+                            selector: "div.overview img ",
+                            extract: "src"
+                        },
+                        titles: {
+                            selector: "h1",
+                            extract: "text"
+                        },
+                        descriptions: {
+                            selector: "div.overview p",
+                            extract: "text"
+                        }
+                    }
+                };
+
+                var rawCourseResults = yield noodle.query(courseQuery);
+                let course = rawCourseResults.results[0].results;
+                let description = "";
+                if (course.descriptions.length > 0) {
+                    course.descriptions.forEach(function (part) {
+                        description += part + "\n";
+                    });
+                }
+                results.courses.push({ name: course.titles[0], image: course.images[0] ? course.images[0].charAt(0) == '/' ? cmImageRootUrl + course.images[0] : course.images[0] : "", description: description, url: courseUrl });
+                finishedCount++;
+                if (finishedCount == courseUrls.length) {
+                    callback(results);
+                }
+            });
+
+            return function (_x12) {
+                return _ref9.apply(this, arguments);
+            };
+        })());
+    });
+
+    return function getCMCoursesForSubject(_x10, _x11) {
+        return _ref8.apply(this, arguments);
+    };
+})();
+
+// -------------- Michigan ---------------
+
+
+let getMichiganSubjects = (() => {
+    var _ref10 = _asyncToGenerator(function* (callback) {
+        var finishedCount = 0;
+        var results = { subjects: [] };
+        var subjectsQuery = {
+            url: michiganRootUrl + 'find/find-open-educational-resources/',
+            type: 'html',
+            selector: 'aside.sidebars section.sidebar ul.menu li.menu__item ul.menu li.menu__item a',
+            extract: ['text', 'href']
+        };
+        console.log("here");
+        var rawSubjectResults = yield noodle.query(subjectsQuery);
+
+        var subjects = rawSubjectResults.results[0].results;
+        console.log(subjects);
+        subjects.forEach((() => {
+            var _ref11 = _asyncToGenerator(function* (subject) {
+                finishedCount++;
+                results.subjects.push({ name: subject.text, url: michiganRootUrl + subject.href, image: "" });
+                if (finishedCount == subjects.length) {
+                    results.subjects.sort(function (a, b) {
+                        if (a.name < b.name) return -1;
+                        if (a.name > b.name) return 1;
+                        return 0;
+                    });
+                    callback(results);
+                }
+            });
+
+            return function (_x14) {
+                return _ref11.apply(this, arguments);
+            };
+        })());
+    });
+
+    return function getMichiganSubjects(_x13) {
+        return _ref10.apply(this, arguments);
+    };
+})();
+
+let getMichiganCoursesForSubject = (() => {
+    var _ref12 = _asyncToGenerator(function* (subject, callback) {
+        var subjectsQuery = {
+            url: michiganRootUrl + 'find/open-educational-resources/' + subject,
+            type: 'html',
+            selector: "aside.sidebars section.sidebar ul.menu li.active ul.menu li.menu__item a",
+            extract: "href"
+        };
+
+        var rawSubjectResults = yield noodle.query(subjectsQuery);
+        var courseUrls = rawSubjectResults.results[0].results;
+        let finishedCount = 0;
+        let results = { courses: [] };
+        courseUrls.forEach((() => {
+            var _ref13 = _asyncToGenerator(function* (courseUrl) {
+                var courseQuery = {
+                    url: michiganRootUrl + courseUrl,
+                    type: 'html',
+                    map: {
+                        images: {
+                            selector: "div.course-image-wrapper img ",
+                            extract: "src"
+                        },
+                        titles: {
+                            selector: "h1.title",
+                            extract: "text"
+                        },
+                        descriptions: {
+                            selector: "div.course-content-wrapper div.field-name-field-description p",
+                            extract: "text"
+                        }
+                    }
+                };
+
+                var rawCourseResults = yield noodle.query(courseQuery);
+                let course = rawCourseResults.results[0].results;
+
+                let description = "";
+                if (course.descriptions.length > 0) {
+                    course.descriptions.forEach(function (part) {
+                        description += part + "\n";
+                    });
+                }
+                results.courses.push({ name: course.titles[0], image: course.images[0], description: description, url: michiganRootUrl + courseUrl });
+                finishedCount++;
+                if (finishedCount == courseUrls.length) {
+                    callback(results);
+                }
+            });
+
+            return function (_x17) {
+                return _ref13.apply(this, arguments);
+            };
+        })());
+    });
+
+    return function getMichiganCoursesForSubject(_x15, _x16) {
+        return _ref12.apply(this, arguments);
+    };
+})();
+
 function _asyncToGenerator(fn) { return function () { var gen = fn.apply(this, arguments); return new Promise(function (resolve, reject) { function step(key, arg) { try { var info = gen[key](arg); var value = info.value; } catch (error) { reject(error); return; } if (info.done) { resolve(value); } else { return Promise.resolve(value).then(function (value) { step("next", value); }, function (err) { step("throw", err); }); } } return step("next"); }); }; }
 
 const noodle = require('noodlejs');
 const axios = require('axios');
 
+const mitId = 'https://ocw.mit.edu/';
+const yaleId = 'https://oyc.yale.edu/';
+const cmId = 'http://oli.cmu.edu/';
+const michiganId = 'https://open.umich.edu/';
+
+function getSubjects(schoolId, callback) {
+    switch (schoolId) {
+        case mitId:
+            getMITSubjects(callback);
+            break;
+        case yaleId:
+            getYaleSubjects(callback);
+            break;
+        case cmId:
+            getCMSubjects(callback);
+            break;
+        case michiganId:
+            getMichiganSubjects(callback);
+            break;
+        default:
+            callback({ subjects: [] });
+    }
+}
+
+function getCourses(schoolId, subjectId, callback) {
+    if (subjectId) {
+        switch (schoolId) {
+            case mitId:
+                getMITCoursesForSubject(getSubjectUrlFromId(subjectId), callback);
+                break;
+            case yaleId:
+                getYaleCoursesForSubject(getSubjectUrlFromId(subjectId), callback);
+                break;
+            case cmId:
+                getCMCoursesForSubject(getSubjectUrlFromId(subjectId), callback);
+                break;
+            case michiganId:
+                getMichiganCoursesForSubject(getSubjectUrlFromId(subjectId), callback);
+                break;
+            default:
+                callback({ courses: [] });
+        }
+    }
+}
+
+// ------------------ MIT ----------------------
 const mitRootUrl = 'https://ocw.mit.edu';
-
 const yaleRootUrl = 'https://oyc.yale.edu';
+const cmRootUrl = 'http://oli.cmu.edu/learn-with-oli/';
+const cmImageRootUrl = 'http://oli.cmu.edu/';
+function getCMSubjects(callback) {
+    let results = { subjects: [] };
+    results.subjects = [{ name: "All Carnegie Mellon Courses", url: cmRootUrl + 'see-all-oli-courses', image: 'http://oli.cmu.edu/wp-content/uploads/2012/07/bio_thumb.png' }];
+    callback(results);
+}
 
-module.exports.getMITSubjects = getMITSubjects;
-module.exports.getMITCoursesForSubject = getMITCoursesForSubject;
-module.exports.getYaleSubjects = getYaleSubjects;
-module.exports.getYaleCoursesForSubject = getYaleCoursesForSubject;
+const michiganRootUrl = 'https://open.umich.edu/';
+
+function getSubjectUrlFromId(subjectId) {
+    return subjectId.split("/").pop();
+}
+
+module.exports.getSubjects = getSubjects;
+module.exports.getCourses = getCourses;
