@@ -51,6 +51,7 @@ app.get('/scrape/subjects', (req, res) => {
 
 app.get('/scrape/courses', (req, res) => {
     const {schoolId, subjectId} = req.query;
+    console.log(subjectId);
     scrapers.getCourses(schoolId, subjectId, results => {
         res.send(results);
     });

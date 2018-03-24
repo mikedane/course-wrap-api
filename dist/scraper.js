@@ -273,11 +273,9 @@ let getMichiganSubjects = (() => {
             selector: 'aside.sidebars section.sidebar ul.menu li.menu__item ul.menu li.menu__item a',
             extract: ['text', 'href']
         };
-        console.log("here");
         var rawSubjectResults = yield noodle.query(subjectsQuery);
 
         var subjects = rawSubjectResults.results[0].results;
-        console.log(subjects);
         subjects.forEach((() => {
             var _ref11 = _asyncToGenerator(function* (subject) {
                 finishedCount++;
@@ -364,6 +362,113 @@ let getMichiganCoursesForSubject = (() => {
     };
 })();
 
+// -------------- John Hopkins ---------------
+
+
+let getJohnHopkinsSubjects = (() => {
+    var _ref14 = _asyncToGenerator(function* (callback) {
+        var finishedCount = 0;
+        var results = { subjects: [] };
+        var subjectsQuery = {
+            url: johnHopkinsRootUrl + 'index.cfm/go/find.browse#topics',
+            type: 'html',
+            selector: 'td.col2 div#Topics li div',
+            extract: ['text']
+        };
+
+        var rawSubjectResults = yield noodle.query(subjectsQuery);
+
+        var subjects = rawSubjectResults.results[0].results;
+        subjects.forEach((() => {
+            var _ref15 = _asyncToGenerator(function* (subject, index) {
+                finishedCount++;
+                results.subjects.push({ name: subject.text, url: johnHopkinsRootUrl + "topics/" + (index + 1), image: "" });
+                if (finishedCount == subjects.length) {
+                    results.subjects.sort(function (a, b) {
+                        if (a.name < b.name) return -1;
+                        if (a.name > b.name) return 1;
+                        return 0;
+                    });
+                    callback(results);
+                }
+            });
+
+            return function (_x19, _x20) {
+                return _ref15.apply(this, arguments);
+            };
+        })());
+    });
+
+    return function getJohnHopkinsSubjects(_x18) {
+        return _ref14.apply(this, arguments);
+    };
+})();
+
+let getJohnHopkinsCoursesForSubject = (() => {
+    var _ref16 = _asyncToGenerator(function* (subject, callback) {
+        var subjectsQuery = {
+            url: johnHopkinsRootUrl + 'index.cfm/go/find.coursesByTopic?topicId=' + subject,
+            type: 'html',
+            selector: "ul li a",
+            extract: "href"
+        };
+
+        var rawSubjectResults = yield noodle.query(subjectsQuery);
+        var courseUrls = rawSubjectResults.results[0].results;
+        let finishedCount = 0;
+        let results = { courses: [] };
+        courseUrls.forEach((() => {
+            var _ref17 = _asyncToGenerator(function* (courseUrl) {
+                var courseQuery = {
+                    url: johnHopkinsRootUrl + courseUrl,
+                    type: 'html',
+                    map: {
+                        images: {
+                            selector: "div#courseImage img",
+                            extract: "src"
+                        },
+                        titles: {
+                            selector: "div.col2 h1",
+                            extract: "text"
+                        },
+                        descriptions: {
+                            selector: "div#courseImageAndInfoBox br+h2+p",
+                            extract: "text"
+                        },
+                        instructors: {
+                            selector: "div#courseInfoBox h2+p",
+                            extract: "text"
+                        }
+                    }
+                };
+
+                var rawCourseResults = yield noodle.query(courseQuery);
+                let course = rawCourseResults.results[0].results;
+
+                let description = "";
+                if (course.descriptions.length > 0) {
+                    course.descriptions.forEach(function (part) {
+                        description += part + "\n";
+                    });
+                }
+                results.courses.push({ name: course.titles[0], image: course.images[0] ? johnHopkinsRootUrl + course.images[0] : "", description: description, url: johnHopkinsRootUrl + courseUrl, instructors: course.instructors[0] });
+                finishedCount++;
+                if (finishedCount == courseUrls.length) {
+                    callback(results);
+                }
+            });
+
+            return function (_x23) {
+                return _ref17.apply(this, arguments);
+            };
+        })());
+    });
+
+    return function getJohnHopkinsCoursesForSubject(_x21, _x22) {
+        return _ref16.apply(this, arguments);
+    };
+})();
+
 function _asyncToGenerator(fn) { return function () { var gen = fn.apply(this, arguments); return new Promise(function (resolve, reject) { function step(key, arg) { try { var info = gen[key](arg); var value = info.value; } catch (error) { reject(error); return; } if (info.done) { resolve(value); } else { return Promise.resolve(value).then(function (value) { step("next", value); }, function (err) { step("throw", err); }); } } return step("next"); }); }; }
 
 const noodle = require('noodlejs');
@@ -373,6 +478,7 @@ const mitId = 'https://ocw.mit.edu/';
 const yaleId = 'https://oyc.yale.edu/';
 const cmId = 'http://oli.cmu.edu/';
 const michiganId = 'https://open.umich.edu/';
+const johnHopkinsId = 'http://ocw.jhsph.edu/';
 
 function getSubjects(schoolId, callback) {
     switch (schoolId) {
@@ -387,6 +493,9 @@ function getSubjects(schoolId, callback) {
             break;
         case michiganId:
             getMichiganSubjects(callback);
+            break;
+        case johnHopkinsId:
+            getJohnHopkinsSubjects(callback);
             break;
         default:
             callback({ subjects: [] });
@@ -408,6 +517,9 @@ function getCourses(schoolId, subjectId, callback) {
             case michiganId:
                 getMichiganCoursesForSubject(getSubjectUrlFromId(subjectId), callback);
                 break;
+            case johnHopkinsId:
+                getJohnHopkinsCoursesForSubject(getSubjectUrlFromId(subjectId), callback);
+                break;
             default:
                 callback({ courses: [] });
         }
@@ -426,6 +538,8 @@ function getCMSubjects(callback) {
 }
 
 const michiganRootUrl = 'https://open.umich.edu/';
+
+const johnHopkinsRootUrl = 'http://ocw.jhsph.edu/';
 
 function getSubjectUrlFromId(subjectId) {
     return subjectId.split("/").pop();
