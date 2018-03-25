@@ -372,8 +372,8 @@ async function getJohnHopkinsSubjects(callback){
     var subjectsQuery = {
         url: johnHopkinsRootUrl + 'index.cfm/go/find.browse#topics',
         type: 'html',
-        selector: 'td.col2 div#Topics li div',
-        extract: ['text']
+        selector: 'td.col2 div#Topics li',
+        extract: ['id', 'text']
     }
     
     var rawSubjectResults = await noodle.query(subjectsQuery);
@@ -381,7 +381,7 @@ async function getJohnHopkinsSubjects(callback){
     var subjects = rawSubjectResults.results[0].results
     subjects.forEach(async (subject, index) => {
         finishedCount++;
-        results.subjects.push({name: subject.text, url: johnHopkinsRootUrl + "topics/" + (index + 1), image: ""});
+        results.subjects.push({name: subject.text, url: johnHopkinsRootUrl + "topics/" + subject.id.split("_").pop(), image: ""});
         if(finishedCount == subjects.length){
             results.subjects.sort((a, b)=>{
                 if (a.name < b.name)
