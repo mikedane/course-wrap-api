@@ -6,6 +6,7 @@ const yaleId = 'https://oyc.yale.edu/';
 const cmId = 'http://oli.cmu.edu/';
 const michiganId = 'https://open.umich.edu/';
 const johnHopkinsId = 'http://ocw.jhsph.edu/';
+const edXId = 'https://www.edx.org/';
 
 function getSubjects(schoolId, callback){
     switch(schoolId){
@@ -23,6 +24,9 @@ function getSubjects(schoolId, callback){
             break;
         case johnHopkinsId:
             getJohnHopkinsSubjects(callback);
+            break;
+        case edXId:
+            getEdXSubjects(callback);
             break;
         default:
             callback({subjects: []});
@@ -46,6 +50,9 @@ function getCourses(schoolId, subjectId, callback){
                 break;
             case johnHopkinsId:
                 getJohnHopkinsCoursesForSubject(getSubjectUrlFromId(subjectId), callback);
+                break;
+            case edXId:
+                getEdXCoursesForSubject(getSubjectUrlFromId(subjectId), callback);
                 break;
             default:
                 callback({courses: []});
@@ -448,9 +455,56 @@ async function getJohnHopkinsCoursesForSubject(subject, callback){
     });
 }
 
+// ------------------- edX --------------------
+const edXApiRootUrl = 'https://www.edx.org/api/v1/';
+
+async function getEdXSubjects(callback){
+    axios.get(edXApiRootUrl + 'catalog/subjects/')
+    .then((subjectResponse) => {
+        let results = {subjects: []};
+        subjectResponse.data.results.forEach((subject) => {
+            results.subjects.push({name: subject.name, url: 'https://www.edx.org/subject/' + subject.uuid, image: subject.card_image_url});
+        });
+        results.subjects.sort((a, b)=>{
+            if (a.name < b.name)
+            return -1;
+            if (a.name > b.name)
+                return 1;
+            return 0;
+        });
+        callback(results);
+    });
+}
+
+async function getEdXCoursesForSubject(subject, callback){
+
+    axios.get(edXApiRootUrl + 'catalog/search?subject_uuids=' + subject + '&do_not_retrieve_all=true&page_size=1000')
+    .then((courseResponse) => {
+        let results = {courses: []};
+        courseResponse.data.objects.results.forEach((course) => {
+            results.courses.push({name: course.title, url: course.marketing_url, image: course.image_url, description: course.full_description, instructors: course.org});
+        });
+        results.courses.sort((a, b)=>{
+            if (a.name < b.name)
+            return -1;
+            if (a.name > b.name)
+                return 1;
+            return 0;
+        });
+        callback(results);
+    });
+}
+
+
+
+
 function getSubjectUrlFromId(subjectId){
     return subjectId.split("/").pop();
 }
+
+
+
+
 
 module.exports.getSubjects = getSubjects;
 module.exports.getCourses = getCourses;
