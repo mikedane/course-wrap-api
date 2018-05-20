@@ -81,9 +81,9 @@ function getSchools(id, getSubjects, callback) {
                 delete school.rawSubjects;
             });
         }
-
         callback({ schools: result });
-        // ---- Updates everything ----
+
+        // ---- Updates information dynamically ----
         // result.forEach((school) => {
         //     shouldFetchFreshData(school._id, result => {
         //         if(result){

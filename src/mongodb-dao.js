@@ -104,9 +104,9 @@ const millisecondsInDay = 86400000;
             });
 
         }
-
         callback({schools: result});
-        // ---- Updates everything ----
+        
+        // ---- Updates information dynamically ----
         // result.forEach((school) => {
         //     shouldFetchFreshData(school._id, result => {
         //         if(result){
@@ -182,7 +182,7 @@ const millisecondsInDay = 86400000;
                     courseCount: {$size: "$courses"},
                 }
             },
-]
+    ]
 
     mongoAggregate(collectionName, getCourses ? subjectsQueryCourses : subjectsQuery, (result) => {
         result.forEach((subject) => {
