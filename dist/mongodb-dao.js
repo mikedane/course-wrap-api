@@ -83,13 +83,14 @@ function getSchools(id, getSubjects, callback) {
         }
 
         callback({ schools: result });
-        result.forEach(school => {
-            shouldFetchFreshData(school._id, result => {
-                if (result) {
-                    accessApi('update/subjects?schoolId=' + school._id);
-                }
-            });
-        });
+        // ---- Updates everything ----
+        // result.forEach((school) => {
+        //     shouldFetchFreshData(school._id, result => {
+        //         if(result){
+        //             accessApi('update/subjects?schoolId=' + school._id);
+        //         }
+        //     });
+        // });
     });
 }
 

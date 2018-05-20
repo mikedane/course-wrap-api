@@ -9,7 +9,7 @@ const axios = require('axios');
 app.use(cors);
 
 app.get('/', (req, res) => {
-    res.send("Welcome to CourseWrap Api!");
+    res.send("<h1>Welcome to CourseWrap Api!</h1>");
 });
 
 app.get('/schools/', (req, res) => {

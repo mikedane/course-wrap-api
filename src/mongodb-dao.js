@@ -106,13 +106,14 @@ const millisecondsInDay = 86400000;
         }
 
         callback({schools: result});
-        result.forEach((school) => {
-            shouldFetchFreshData(school._id, result => {
-                if(result){
-                    accessApi('update/subjects?schoolId=' + school._id);
-                }
-            });
-        });
+        // ---- Updates everything ----
+        // result.forEach((school) => {
+        //     shouldFetchFreshData(school._id, result => {
+        //         if(result){
+        //             accessApi('update/subjects?schoolId=' + school._id);
+        //         }
+        //     });
+        // });
     });
  }
 
