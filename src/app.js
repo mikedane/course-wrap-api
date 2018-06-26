@@ -56,6 +56,6 @@ app.get('/scrape/courses', (req, res) => {
     });
 });
 
-app.listen(3000, () => console.log('Server listening on port 3000!'));
+app.listen(2104, () => console.log('Server listening on port 2104!'));
 
 exports.ocwScraper = app;

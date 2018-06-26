@@ -3,13 +3,7 @@ const MongoClient = require('mongodb').MongoClient;
 const assert = require('assert');
 const scrapers = require('./scraper.js');
 const axios = require('axios');
-
 const millisecondsInDay = 86400000;
-
-
-
-
-
 
  function getSchools(id, getSubjects, callback){
     const collectionName = "schools";
